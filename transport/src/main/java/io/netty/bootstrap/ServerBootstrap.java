@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,7 +23,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -37,6 +36,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,7 +51,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
 
-    private final Map<ChannelOption<?>, Object> childOptions = new ConcurrentHashMap<>();
+    // The order in which child ChannelOptions are applied is important they may depend on each other for validation
+    // purposes.
+    private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<>();
     private final Map<AttributeKey<?>, Object> childAttrs = new ConcurrentHashMap<>();
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
     private volatile EventLoopGroup childGroup;
@@ -65,7 +67,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         childGroup = bootstrap.childGroup;
         childHandler = bootstrap.childHandler;
         channelFactory = bootstrap.channelFactory;
-        childOptions.putAll(bootstrap.childOptions);
+        synchronized (bootstrap.childOptions) {
+            childOptions.putAll(bootstrap.childOptions);
+        }
         childAttrs.putAll(bootstrap.childAttrs);
     }
 
@@ -99,10 +103,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      */
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
         requireNonNull(childOption, "childOption");
-        if (value == null) {
-            childOptions.remove(childOption);
-        } else {
-            childOptions.put(childOption, value);
+        synchronized (childOptions) {
+            if (value == null) {
+                childOptions.remove(childOption);
+            } else {
+                childOptions.put(childOption, value);
+            }
         }
         return this;
     }
@@ -160,15 +166,14 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     @Override
     ChannelFuture init(Channel channel) {
         final ChannelPromise promise = channel.newPromise();
-        setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
-        setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
+        setChannelOptions(channel, newOptionsArray(), logger);
+        setAttributes(channel, newAttributesArray());
 
         ChannelPipeline p = channel.pipeline();
 
         final ChannelHandler currentChildHandler = childHandler;
-        final Entry<ChannelOption<?>, Object>[] currentChildOptions =
-                childOptions.entrySet().toArray(newOptionArray(0));
-        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
+        final Entry<ChannelOption<?>, Object>[] currentChildOptions = newOptionsArray(childOptions);
+        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = newAttributesArray(childAttrs);
 
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
@@ -210,7 +215,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return this;
     }
 
-    private static class ServerBootstrapAcceptor implements ChannelInboundHandler {
+    private static class ServerBootstrapAcceptor implements ChannelHandler {
 
         private final ChannelHandler childHandler;
         private final Entry<ChannelOption<?>, Object>[] childOptions;
@@ -252,10 +257,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private void initChild(final Channel child) {
             assert child.eventLoop().inEventLoop();
             try {
-                child.pipeline().addLast(childHandler);
-
                 setChannelOptions(child, childOptions, logger);
                 setAttributes(child, childAttrs);
+
+                child.pipeline().addLast(childHandler);
 
                 child.register().addListener((ChannelFutureListener) future -> {
                     if (!future.isSuccess()) {
@@ -309,7 +314,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     }
 
     final Map<ChannelOption<?>, Object> childOptions() {
-        return copiedMap(childOptions);
+        synchronized (childOptions) {
+            return copiedMap(childOptions);
+        }
     }
 
     final Map<AttributeKey<?>, Object> childAttrs() {

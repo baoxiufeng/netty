@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,7 +17,7 @@ package io.netty.channel.group;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -235,8 +235,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     // Create a safe duplicate of the message to write it to a channel but not affect other writes.
     // See https://github.com/netty/netty/issues/1461
     private static Object safeDuplicate(Object message) {
-        if (message instanceof ByteBuf) {
-            return ((ByteBuf) message).retainedDuplicate();
+        if (message instanceof ByteBufConvertible) {
+            return ((ByteBufConvertible) message).asByteBuf().retainedDuplicate();
         } else if (message instanceof ByteBufHolder) {
             return ((ByteBufHolder) message).retainedDuplicate();
         } else {
@@ -263,7 +263,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
             future = voidFuture;
         } else {
-            Map<Channel, ChannelFuture> futures = new LinkedHashMap<>(size());
+            Map<Channel, ChannelFuture> futures = new LinkedHashMap<>(nonServerChannels.size());
             for (Channel c: nonServerChannels.values()) {
                 if (matcher.matches(c)) {
                     futures.put(c, c.write(safeDuplicate(message)));
@@ -396,7 +396,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             }
             future = voidFuture;
         } else {
-            Map<Channel, ChannelFuture> futures = new LinkedHashMap<>(size());
+            Map<Channel, ChannelFuture> futures = new LinkedHashMap<>(nonServerChannels.size());
             for (Channel c: nonServerChannels.values()) {
                 if (matcher.matches(c)) {
                     futures.put(c, c.writeAndFlush(safeDuplicate(message)));

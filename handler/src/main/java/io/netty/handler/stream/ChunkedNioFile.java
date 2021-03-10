@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,6 +25,7 @@ import io.netty.channel.FileRegion;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 
 /**
@@ -32,7 +33,7 @@ import java.nio.channels.FileChannel;
  * NIO {@link FileChannel}.
  * <p>
  * If your operating system supports
- * <a href="http://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
+ * <a href="https://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
  */
 public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
@@ -100,9 +101,8 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
                     "chunkSize: " + chunkSize +
                     " (expected: a positive integer)");
         }
-
-        if (offset != 0) {
-            in.position(offset);
+        if (!in.isOpen()) {
+            throw new ClosedChannelException();
         }
         this.in = in;
         this.chunkSize = chunkSize;
@@ -160,7 +160,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
         try {
             int readBytes = 0;
             for (;;) {
-                int localReadBytes = buffer.writeBytes(in, chunkSize - readBytes);
+                int localReadBytes = buffer.writeBytes(in, offset + readBytes, chunkSize - readBytes);
                 if (localReadBytes < 0) {
                     break;
                 }

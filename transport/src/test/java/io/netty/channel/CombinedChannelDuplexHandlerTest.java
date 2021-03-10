@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -191,7 +191,7 @@ public class CombinedChannelDuplexHandlerTest {
 
         CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler> handler =
                 new CombinedChannelDuplexHandler<>(
-                        inboundHandler, new ChannelOutboundHandler() { });
+                        inboundHandler, new ChannelHandler() { });
 
         EmbeddedChannel channel = new EmbeddedChannel(handler);
         channel.pipeline().fireChannelWritabilityChanged();
@@ -359,9 +359,9 @@ public class CombinedChannelDuplexHandlerTest {
             }
         };
         EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
-                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        new ChannelInboundHandler() {
-                        }, new ChannelOutboundHandler() { }));
+                new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>(
+                        new ChannelHandler() {
+                        }, new ChannelHandler() { }));
         ChannelPipeline pipeline = ch.pipeline();
 
         ChannelPromise promise = ch.newPromise();
@@ -392,7 +392,7 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test(expected = IllegalStateException.class)
     public void testNotSharable() {
-        new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>() {
+        new CombinedChannelDuplexHandler<ChannelHandler, ChannelHandler>() {
             @Override
             public boolean isSharable() {
                 return true;

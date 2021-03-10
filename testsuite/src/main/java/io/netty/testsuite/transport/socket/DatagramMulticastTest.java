@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -51,13 +51,13 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         NetworkInterface iface = multicastNetworkInterface();
         Assume.assumeNotNull("No NetworkInterface found that supports multicast and " +
-                internetProtocolFamily(), iface);
+                             socketInternetProtocalFamily(), iface);
 
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
         sb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 // Nothing will be sent.
             }
         });
@@ -131,7 +131,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         private volatile boolean fail;
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
             if (done) {
                 fail = true;
             }
@@ -156,11 +156,11 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return SocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());
+        return SocketTestPermutation.INSTANCE.datagram(socketInternetProtocalFamily());
     }
 
     private InetSocketAddress newAnySocketAddress() throws UnknownHostException {
-        switch (internetProtocolFamily()) {
+        switch (socketInternetProtocalFamily()) {
             case IPv4:
                 return new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 0);
             case IPv6:
@@ -174,7 +174,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         Enumeration<InetAddress> addresses = iface.getInetAddresses();
         while (addresses.hasMoreElements()) {
             InetAddress address = addresses.nextElement();
-            if (internetProtocolFamily().addressType().isAssignableFrom(address.getClass())) {
+            if (socketInternetProtocalFamily().addressType().isAssignableFrom(address.getClass())) {
                 return new InetSocketAddress(address, 0);
             }
         }
@@ -189,13 +189,13 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
                 while (addresses.hasMoreElements()) {
                     InetAddress address = addresses.nextElement();
-                    if (internetProtocolFamily().addressType().isAssignableFrom(address.getClass())) {
+                    if (socketInternetProtocalFamily().addressType().isAssignableFrom(address.getClass())) {
                         MulticastSocket socket = new MulticastSocket(newAnySocketAddress());
                         socket.setReuseAddress(true);
                         socket.setNetworkInterface(iface);
                         try {
                             socket.send(new java.net.DatagramPacket(new byte[] { 1, 2, 3, 4 }, 4,
-                                    new InetSocketAddress(groupAddress(), 12345)));
+                                                                    new InetSocketAddress(groupAddress(), 12345)));
                             return iface;
                         } catch (IOException ignore) {
                             // Try the next interface
@@ -210,7 +210,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     private String groupAddress() {
-        return internetProtocolFamily() == InternetProtocolFamily.IPv4 ?
+        return groupInternetProtocalFamily() == InternetProtocolFamily.IPv4?
                 "230.0.0.1" : "FF01:0:0:0:0:0:0:101";
     }
 }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -87,19 +87,6 @@ public final class Errors {
         }
     }
 
-    static final class NativeConnectException extends ConnectException {
-        private static final long serialVersionUID = -5532328671712318161L;
-        private final int expectedErr;
-        NativeConnectException(String method, int expectedErr) {
-            super(method + "(..) failed: " + ERRORS[-expectedErr]);
-            this.expectedErr = expectedErr;
-        }
-
-        int expectedErr() {
-            return expectedErr;
-        }
-    }
-
     static {
         for (int i = 0; i < ERRORS.length; i++) {
             // This is ok as strerror returns 'Unknown error i' when the message is not known.
@@ -107,7 +94,7 @@ public final class Errors {
         }
     }
 
-    static void throwConnectException(String method, int err)
+    public static void throwConnectException(String method, int err)
             throws IOException {
         if (err == ERROR_EALREADY_NEGATIVE) {
             throw new ConnectionPendingException();

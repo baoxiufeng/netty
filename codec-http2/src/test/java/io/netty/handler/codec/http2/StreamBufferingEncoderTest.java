@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -165,8 +165,8 @@ public class StreamBufferingEncoderTest {
         writeVerifyWriteHeaders(times(2), 3);
         // Contiguous data writes are coalesced
         ArgumentCaptor<ByteBuf> bufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(writer, times(1))
-                .writeData(eq(ctx), eq(3), bufCaptor.capture(), eq(0), eq(false), any(ChannelPromise.class));
+        verify(writer, times(1)).writeData(any(ChannelHandlerContext.class), eq(3),
+                bufCaptor.capture(), eq(0), eq(false), any(ChannelPromise.class));
         assertEquals(expectedBytes, bufCaptor.getValue().readableBytes());
     }
 

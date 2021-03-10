@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -31,21 +31,46 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The internal data structure that stores the thread-local variables for Netty and all {@link FastThreadLocal}s.
  * Note that this class is for internal use only and is subject to change at any time.  Use {@link FastThreadLocal}
  * unless you know what you are doing.
  */
-public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap {
+public final class InternalThreadLocalMap {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(InternalThreadLocalMap.class);
+    private static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap =
+            new ThreadLocal<>();
+    private static final AtomicInteger nextIndex = new AtomicInteger();
 
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
     private static final int STRING_BUILDER_INITIAL_SIZE;
     private static final int STRING_BUILDER_MAX_SIZE;
+    private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
+    private static final int INDEXED_VARIABLE_TABLE_INITIAL_SIZE = 32;
 
     public static final Object UNSET = new Object();
+
+    /** Used by {@link FastThreadLocal} */
+    private Object[] indexedVariables;
+
+    // Core thread-locals
+    private int futureListenerStackDepth;
+    private int localChannelReaderStackDepth;
+    private Map<Class<?>, Boolean> handlerSharableCache;
+    private ThreadLocalRandom random;
+    private Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache;
+    private Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache;
+
+    // String-related thread-locals
+    private StringBuilder stringBuilder;
+    private Map<Charset, CharsetEncoder> charsetEncoderCache;
+    private Map<Charset, CharsetDecoder> charsetDecoderCache;
+
+    // ArrayList-related thread-locals
+    private ArrayList<Object> arrayList;
 
     private BitSet cleanerFlags;
 
@@ -84,7 +109,6 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     }
 
     private static InternalThreadLocalMap slowGet() {
-        ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = UnpaddedInternalThreadLocalMap.slowThreadLocalMap;
         InternalThreadLocalMap ret = slowThreadLocalMap.get();
         if (ret == null) {
             ret = new InternalThreadLocalMap();
@@ -119,16 +143,12 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         return nextIndex.get() - 1;
     }
 
-    // Cache line padding (must be public)
-    // With CompressedOops enabled, an instance of this class should occupy at least 128 bytes.
-    public long rp1, rp2, rp3, rp4, rp5, rp6, rp7, rp8, rp9;
-
     private InternalThreadLocalMap() {
-        super(newIndexedVariableTable());
+        indexedVariables = newIndexedVariableTable();
     }
 
     private static Object[] newIndexedVariableTable() {
-        Object[] array = new Object[32];
+        Object[] array = new Object[INDEXED_VARIABLE_TABLE_INITIAL_SIZE];
         Arrays.fill(array, UNSET);
         return array;
     }
@@ -259,7 +279,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         Map<Class<?>, Boolean> cache = handlerSharableCache;
         if (cache == null) {
             // Start with small capacity to keep memory overhead as low as possible.
-            handlerSharableCache = cache = new WeakHashMap<>(4);
+            handlerSharableCache = cache = new WeakHashMap<>(HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY);
         }
         return cache;
     }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,6 +26,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -41,11 +42,6 @@ public class LastInboundHandler implements ChannelHandler {
     private boolean channelActive;
     private String writabilityStates = "";
 
-    // TODO(scott): use JDK 8's Consumer
-    public interface Consumer<T> {
-        void accept(T obj);
-    }
-
     private static final Consumer<Object> NOOP_CONSUMER = obj -> {
     };
 
@@ -55,7 +51,7 @@ public class LastInboundHandler implements ChannelHandler {
     }
 
     public LastInboundHandler() {
-        this(LastInboundHandler.noopConsumer());
+        this(noopConsumer());
     }
 
     public LastInboundHandler(Consumer<ChannelHandlerContext> channelReadCompleteConsumer) {
@@ -94,7 +90,7 @@ public class LastInboundHandler implements ChannelHandler {
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-        if (writabilityStates == "") {
+        if ("".equals(writabilityStates)) {
             writabilityStates = String.valueOf(ctx.channel().isWritable());
         } else {
             writabilityStates += "," + ctx.channel().isWritable();

@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -39,6 +38,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.util.AsciiString;
@@ -144,6 +144,29 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .add(new AsciiString("foo"), new AsciiString("goo"))
                 .add(new AsciiString("foo"), new AsciiString("goo2"))
                 .add(new AsciiString("foo2"), new AsciiString("goo2"));
+
+        ChannelPromise writePromise = newPromise();
+        verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
+    }
+
+    @Test
+    public void testHttpScheme() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET,
+                "http://my-user_name@www.example.org:5555/example");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "my-user_name@www.example.org:5555");
+        httpHeaders.add(of("foo"), of("goo"));
+        httpHeaders.add(of("foo"), of("goo2"));
+        httpHeaders.add(of("foo2"), of("goo2"));
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("GET")).path(new AsciiString("/example"))
+                        .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
+                        .scheme(new AsciiString("http"))
+                        .add(new AsciiString("foo"), new AsciiString("goo"))
+                        .add(new AsciiString("foo"), new AsciiString("goo2"))
+                        .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         ChannelPromise writePromise = newPromise();
         verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
@@ -513,6 +536,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 p.addLast(new HttpToHttp2ConnectionHandlerBuilder()
                            .server(true)
                            .frameListener(serverFrameCountDown)
+                           .httpScheme(HttpScheme.HTTP)
                            .build());
                 serverChannelLatch.countDown();
             }

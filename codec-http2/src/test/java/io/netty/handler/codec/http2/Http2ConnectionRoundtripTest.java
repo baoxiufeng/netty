@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -24,7 +24,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -51,6 +50,8 @@ import java.io.ByteArrayOutputStream;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
@@ -453,14 +454,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch serverWriteHeadersLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> serverWriteHeadersCauseRef = new AtomicReference<>();
 
-        final Http2Headers headers = dummyHeaders();
         final int streamId = 3;
-        runInChannel(clientChannel, () -> {
-            http2Client.encoder().writeHeaders(ctx(), streamId, headers, CONNECTION_STREAM_ID,
-                    DEFAULT_PRIORITY_WEIGHT, false, 0, false, newPromise());
-            http2Client.encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(), newPromise());
-            http2Client.flush(ctx());
-        });
 
         doAnswer((Answer<Void>) invocationOnMock -> {
             if (streamId == (Integer) invocationOnMock.getArgument(1)) {
@@ -468,6 +462,14 @@ public class Http2ConnectionRoundtripTest {
             }
             return null;
         }).when(serverListener).onRstStreamRead(any(ChannelHandlerContext.class), eq(streamId), anyLong());
+
+        final Http2Headers headers = dummyHeaders();
+        runInChannel(clientChannel, () -> {
+            http2Client.encoder().writeHeaders(ctx(), streamId, headers, CONNECTION_STREAM_ID,
+                    DEFAULT_PRIORITY_WEIGHT, false, 0, false, newPromise());
+            http2Client.encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(), newPromise());
+            http2Client.flush(ctx());
+        });
 
         assertTrue(serverSettingsAckLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
         assertTrue(serverGotRstLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
@@ -519,7 +521,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(requestLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
         // Add a handler that will immediately throw an exception.
-        clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
+        clientChannel.pipeline().addFirst(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 throw Http2Exception.connectionError(PROTOCOL_ERROR, "Fake Exception");
@@ -701,7 +703,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(requestLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
         // Add a handler that will immediately throw an exception.
-        clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
+        clientChannel.pipeline().addFirst(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 throw new RuntimeException("Fake Exception");
@@ -811,34 +813,31 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
-    public void createStreamSynchronouslyAfterGoAwayReceivedShouldFailLocally() throws Exception {
+    public void listenerIsNotifiedOfGoawayBeforeStreamsAreRemovedFromTheConnection() throws Exception {
         bootstrapEnv(1, 1, 2, 1, 1);
-
-        final CountDownLatch clientGoAwayLatch = new CountDownLatch(1);
-        doAnswer((Answer<Void>) invocationOnMock -> {
-            clientGoAwayLatch.countDown();
-            return null;
-        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
 
         // We want both sides to do graceful shutdown during the test.
         setClientGracefulShutdownTime(10000);
         setServerGracefulShutdownTime(10000);
 
-        final Http2Headers headers = dummyHeaders();
-        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<>();
-        final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
-        doAnswer((Answer<Void>) invocationOnMock -> {
-            ChannelFuture f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
-                    true, newPromise());
-            clientWriteAfterGoAwayFutureRef.set(f);
-            f.addListener((ChannelFutureListener) future -> clientWriteAfterGoAwayLatch.countDown());
-            http2Client.flush(ctx());
-            return null;
+        final AtomicReference<Http2Stream.State> clientStream3State = new AtomicReference<Http2Stream.State>();
+        final CountDownLatch clientGoAwayLatch = new CountDownLatch(1);
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                clientStream3State.set(http2Client.connection().stream(3).state());
+                clientGoAwayLatch.countDown();
+                return null;
+            }
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
 
+        // Create a single stream by sending a HEADERS frame to the server.
+        final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, () -> {
+            http2Client.encoder().writeHeaders(ctx(), 1, headers, 0, (short) 16, false, 0,
+                    false, newPromise());
             http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
-                    true, newPromise());
+                    false, newPromise());
             http2Client.flush(ctx());
         });
 
@@ -848,23 +847,34 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(requestLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
         runInChannel(serverChannel, () -> {
-            http2Server.encoder().writeGoAway(serverCtx(), 3, NO_ERROR.code(), EMPTY_BUFFER, serverNewPromise());
+            http2Server.encoder().writeGoAway(serverCtx(), 1, NO_ERROR.code(), EMPTY_BUFFER, serverNewPromise());
             http2Server.flush(serverCtx());
         });
 
-        // Wait for the client's write operation to complete.
-        assertTrue(clientWriteAfterGoAwayLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        // wait for the client to receive the GO_AWAY.
+        assertTrue(clientGoAwayLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(1), eq(NO_ERROR.code()),
+            any(ByteBuf.class));
+        assertEquals(Http2Stream.State.OPEN, clientStream3State.get());
 
-        ChannelFuture clientWriteAfterGoAwayFuture = clientWriteAfterGoAwayFutureRef.get();
-        assertNotNull(clientWriteAfterGoAwayFuture);
-        Throwable clientCause = clientWriteAfterGoAwayFuture.cause();
-        assertThat(clientCause, is(instanceOf(Http2Exception.StreamException.class)));
-        assertEquals(Http2Error.REFUSED_STREAM.code(), ((Http2Exception.StreamException) clientCause).error().code());
+        // Make sure that stream 3 has been closed which is true if it's gone.
+        final CountDownLatch probeStreamCount = new CountDownLatch(1);
+        final AtomicBoolean stream3Exists = new AtomicBoolean();
+        final AtomicInteger streamCount = new AtomicInteger();
+        runInChannel(this.clientChannel, () -> {
+            stream3Exists.set(http2Client.connection().stream(3) != null);
+            streamCount.set(http2Client.connection().numActiveStreams());
+            probeStreamCount.countDown();
+        });
+        // The stream should be closed right after
+        assertTrue(probeStreamCount.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        assertEquals(1, streamCount.get());
+        assertFalse(stream3Exists.get());
 
         // Wait for the server to receive a GO_AWAY, but this is expected to timeout!
         assertFalse(goAwayLatch.await(1, SECONDS));
         verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
-                any(ByteBuf.class));
+            any(ByteBuf.class));
 
         // Shutdown shouldn't wait for the server to close streams
         setClientGracefulShutdownTime(0);

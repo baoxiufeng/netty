@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -36,7 +36,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
     private final Deque<AggregateState> depths = new ArrayDeque<>(4);
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, RedisMessage msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, RedisMessage msg) throws Exception {
         if (msg instanceof ArrayHeaderRedisMessage) {
             msg = decodeRedisArrayHeader((ArrayHeaderRedisMessage) msg);
             if (msg == null) {
@@ -60,7 +60,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             }
         }
 
-        out.add(msg);
+        ctx.fireChannelRead(msg);
     }
 
     private RedisMessage decodeRedisArrayHeader(ArrayHeaderRedisMessage header) {

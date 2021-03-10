@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,8 +30,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageDecoder;
-
-import java.util.List;
 
 /**
  * Decodes a received {@link ByteBuf} into a
@@ -103,7 +101,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         final byte[] array;
         final int offset;
         final int length = msg.readableBytes();
@@ -117,16 +115,16 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
         if (extensionRegistry == null) {
             if (HAS_PARSER) {
-                out.add(prototype.getParserForType().parseFrom(array, offset, length));
+                ctx.fireChannelRead(prototype.getParserForType().parseFrom(array, offset, length));
             } else {
-                out.add(prototype.newBuilderForType().mergeFrom(array, offset, length).build());
+                ctx.fireChannelRead(prototype.newBuilderForType().mergeFrom(array, offset, length).build());
             }
         } else {
             if (HAS_PARSER) {
-                out.add(prototype.getParserForType().parseFrom(
+                ctx.fireChannelRead(prototype.getParserForType().parseFrom(
                         array, offset, length, extensionRegistry));
             } else {
-                out.add(prototype.newBuilderForType().mergeFrom(
+                ctx.fireChannelRead(prototype.newBuilderForType().mergeFrom(
                         array, offset, length, extensionRegistry).build());
             }
         }

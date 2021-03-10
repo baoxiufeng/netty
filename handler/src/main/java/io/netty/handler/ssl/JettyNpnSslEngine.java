@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,21 +16,19 @@
 
 package io.netty.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.util.internal.PlatformDependent;
-
-import java.util.LinkedHashSet;
-import java.util.List;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-
 import org.eclipse.jetty.npn.NextProtoNego;
 import org.eclipse.jetty.npn.NextProtoNego.ClientProvider;
 import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import java.util.LinkedHashSet;
+import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 final class JettyNpnSslEngine extends JdkSslEngine {
     private static boolean available;

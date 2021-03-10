@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -29,7 +29,7 @@ import java.util.NoSuchElementException;
 /**
  * A list of {@link ChannelHandler}s which handles or intercepts inbound events and outbound operations of a
  * {@link Channel}. {@link ChannelPipeline} implements an advanced form of the
- * <a href="http://www.oracle.com/technetwork/java/interceptingfilter-142169.html">Intercepting Filter</a> pattern
+ * <a href="https://www.oracle.com/technetwork/java/interceptingfilter-142169.html">Intercepting Filter</a> pattern
  * to give a user full control over how an event is handled and how the {@link ChannelHandler}s in a pipeline
  * interact with each other.
  *
@@ -271,7 +271,7 @@ public interface ChannelPipeline
     ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);
 
     /**
-     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the first position of this pipeline. {@code null} handlers will be skipped.
      *
      * @param handlers  the handlers to insert first
      *
@@ -279,7 +279,7 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(ChannelHandler... handlers);
 
     /**
-     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
+     * Inserts {@link ChannelHandler}s at the last position of this pipeline. {@code null} handlers will be skipped.
      *
      * @param handlers  the handlers to insert last
      *
@@ -436,6 +436,14 @@ public interface ChannelPipeline
      * @return the context of the last handler.  {@code null} if this pipeline is empty.
      */
     ChannelHandlerContext lastContext();
+
+    /**
+     * Returns {@code true} if this {@link ChannelPipeline} is empty, which means no {@link ChannelHandler} is
+     * present.
+     */
+    default boolean isEmpty() {
+        return lastContext() == null;
+    }
 
     /**
      * Returns the {@link ChannelHandler} with the specified name in this

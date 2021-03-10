@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -77,6 +78,9 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     protected AbstractKQueueUnsafe newUnsafe() {
         return new KQueueStreamUnsafe();
     }
+
+    @Override
+    public abstract KQueueDuplexChannelConfig config();
 
     @Override
     public ChannelMetadata metadata() {
@@ -267,7 +271,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         do {
             final int msgCount = in.size();
             // Do gathering write if the outbound buffer entries start with more than one ByteBuf.
-            if (msgCount > 1 && in.current() instanceof ByteBuf) {
+            if (msgCount > 1 && in.current() instanceof ByteBufConvertible) {
                 writeSpinCount -= doWriteMultiple(in);
             } else if (msgCount == 0) {
                 // Wrote all messages.
@@ -316,8 +320,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         // The outbound buffer contains only one message or it contains a file region.
         Object msg = in.current();
-        if (msg instanceof ByteBuf) {
-            return writeBytes(in, (ByteBuf) msg);
+        if (msg instanceof ByteBufConvertible) {
+            return writeBytes(in, ((ByteBufConvertible) msg).asByteBuf());
         } else if (msg instanceof DefaultFileRegion) {
             return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
@@ -359,8 +363,8 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
+        if (msg instanceof ByteBufConvertible) {
+            ByteBuf buf = ((ByteBufConvertible) msg).asByteBuf();
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
 
@@ -568,7 +572,10 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(cause);
-                if (close || cause instanceof IOException) {
+
+                // If oom will close the read event, release connection.
+                // See https://github.com/netty/netty/issues/10434
+                if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
                     shutdownInput(false);
                 } else {
                     readIfIsAutoRead();

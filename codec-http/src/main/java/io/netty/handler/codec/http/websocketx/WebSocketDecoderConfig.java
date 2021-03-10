@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,12 +15,15 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.util.internal.ObjectUtil;
+import java.util.Objects;
 
 /**
  * Frames decoder configuration.
  */
 public final class WebSocketDecoderConfig {
+
+    static final WebSocketDecoderConfig DEFAULT =
+        new WebSocketDecoderConfig(65536, true, false, false, true, true);
 
     private final int maxFramePayloadLength;
     private final boolean expectMaskedFrames;
@@ -102,23 +105,19 @@ public final class WebSocketDecoderConfig {
     }
 
     public static Builder newBuilder() {
-        return new Builder();
+        return new Builder(DEFAULT);
     }
 
     public static final class Builder {
-        private int maxFramePayloadLength = 65536;
-        private boolean expectMaskedFrames = true;
+        private int maxFramePayloadLength;
+        private boolean expectMaskedFrames;
         private boolean allowMaskMismatch;
         private boolean allowExtensions;
-        private boolean closeOnProtocolViolation = true;
-        private boolean withUTF8Validator = true;
-
-        private Builder() {
-            /* No-op */
-        }
+        private boolean closeOnProtocolViolation;
+        private boolean withUTF8Validator;
 
         private Builder(WebSocketDecoderConfig decoderConfig) {
-            ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+            Objects.requireNonNull(decoderConfig, "decoderConfig");
             maxFramePayloadLength = decoderConfig.maxFramePayloadLength();
             expectMaskedFrames = decoderConfig.expectMaskedFrames();
             allowMaskMismatch = decoderConfig.allowMaskMismatch();

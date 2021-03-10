@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,7 +35,6 @@ import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -281,10 +280,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                     buffer.writerIndex(buffer.writerIndex() + allocHandle.lastBytesRead())));
             free = false;
             return 1;
-        } catch (Throwable cause) {
-            PlatformDependent.throwException(cause);
-            return -1;
-        }  finally {
+        } finally {
             if (free) {
                 buffer.release();
             }

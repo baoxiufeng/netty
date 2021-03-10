@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -26,7 +26,6 @@ import io.netty.util.ReferenceCountUtil;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
-import java.util.List;
 
 /**
  * {@link OptionalSslHandler} is a utility decoder to support both SSL and non-SSL handlers
@@ -41,7 +40,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext context, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext context, ByteBuf in) throws Exception {
         if (in.readableBytes() < SslUtils.SSL_RECORD_HEADER_LENGTH) {
             return;
         }

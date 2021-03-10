@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -150,6 +150,21 @@ public class FlushConsolidationHandlerTest {
         channel.pipeline().remove(FlushConsolidationHandler.class);
         assertEquals(1, flushCount.get());
         assertEquals(1L, (long) channel.readOutbound());
+        assertNull(channel.readOutbound());
+        assertFalse(channel.finish());
+    }
+
+    /**
+     * See https://github.com/netty/netty/issues/9923
+     */
+    @Test
+    public void testResend() throws Exception {
+        final AtomicInteger flushCount = new AtomicInteger();
+        final EmbeddedChannel channel = newChannel(flushCount, true);
+        channel.writeAndFlush(1L).addListener(future -> channel.writeAndFlush(1L));
+        channel.flushOutbound();
+        assertEquals(1L, ((Long) channel.readOutbound()).longValue());
+        assertEquals(1L, ((Long) channel.readOutbound()).longValue());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -254,7 +254,7 @@ public abstract class WebSocketClientHandshaker {
             HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
             if (codec == null) {
                promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                       "a HttpResponseDecoder or HttpClientCodec"));
+                       "an HttpResponseDecoder or HttpClientCodec"));
                return promise;
             }
         }
@@ -270,7 +270,7 @@ public abstract class WebSocketClientHandshaker {
                 }
                 if (ctx == null) {
                     promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                            "a HttpRequestEncoder or HttpClientCodec"));
+                            "an HttpRequestEncoder or HttpClientCodec"));
                     return;
                 }
                 p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
@@ -322,9 +322,9 @@ public abstract class WebSocketClientHandshaker {
         } // else mixed cases - which are all errors
 
         if (!protocolValid) {
-            throw new WebSocketHandshakeException(String.format(
+            throw new WebSocketClientHandshakeException(String.format(
                     "Invalid subprotocol. Actual: %s. Expected one of: %s",
-                    receivedProtocol, expectedSubprotocol));
+                    receivedProtocol, expectedSubprotocol), response);
         }
 
         setHandshakeComplete();
@@ -347,7 +347,7 @@ public abstract class WebSocketClientHandshaker {
             ctx = p.context(HttpClientCodec.class);
             if (ctx == null) {
                 throw new IllegalStateException("ChannelPipeline does not contain " +
-                        "a HttpRequestEncoder or HttpClientCodec");
+                        "an HttpRequestEncoder or HttpClientCodec");
             }
             final HttpClientCodec codec =  (HttpClientCodec) ctx.handler();
             // Remove the encoder part of the codec as the user may start writing frames after this method returns.
@@ -416,7 +416,7 @@ public abstract class WebSocketClientHandshaker {
                 ctx = p.context(HttpClientCodec.class);
                 if (ctx == null) {
                     return promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                            "a HttpResponseDecoder or HttpClientCodec"));
+                            "an HttpResponseDecoder or HttpClientCodec"));
                 }
             }
             // Add aggregator and ensure we feed the HttpResponse so it is aggregated. A limit of 8192 should be more
@@ -427,7 +427,7 @@ public abstract class WebSocketClientHandshaker {
             p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
             p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpResponse>() {
                 @Override
-                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+                protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
                     // Remove ourself and do the actual handshake
                     ctx.pipeline().remove(this);
                     try {
@@ -546,12 +546,9 @@ public abstract class WebSocketClientHandshaker {
         }
 
         String path = wsURL.getRawPath();
+        path = path == null || path.isEmpty() ? "/" : path;
         String query = wsURL.getRawQuery();
-        if (query != null && !query.isEmpty()) {
-            path = path + '?' + query;
-        }
-
-        return path == null || path.isEmpty() ? "/" : path;
+        return query != null && !query.isEmpty() ? path + '?' + query : path;
     }
 
     static CharSequence websocketHostValue(URI wsURL) {
@@ -573,7 +570,7 @@ public abstract class WebSocketClientHandshaker {
         }
 
         // if the port is not standard (80/443) its needed to add the port to the header.
-        // See http://tools.ietf.org/html/rfc6454#section-6.2
+        // See https://tools.ietf.org/html/rfc6454#section-6.2
         return NetUtil.toSocketAddressString(host, port);
     }
 
@@ -598,7 +595,7 @@ public abstract class WebSocketClientHandshaker {
 
         if (port != defaultPort && port != -1) {
             // if the port is not standard (80/443) its needed to add the port to the header.
-            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            // See https://tools.ietf.org/html/rfc6454#section-6.2
             return schemePrefix + NetUtil.toSocketAddressString(host, port);
         }
         return schemePrefix + host;

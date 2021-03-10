@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.http.websocketx;
+
+import io.netty.util.AsciiString;
 
 /**
  * <p>
@@ -25,43 +27,47 @@ package io.netty.handler.codec.http.websocketx;
  * </p>
  */
 public enum WebSocketVersion {
-    UNKNOWN("unknown"),
+
+    UNKNOWN(AsciiString.cached("unknown")),
 
     /**
-     * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
+     * <a href= "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
      * >draft-ietf-hybi-thewebsocketprotocol- 00</a>.
      */
-    V00("0"),
+    V00(AsciiString.cached("0")),
 
     /**
-     * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07"
+     * <a href= "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07"
      * >draft-ietf-hybi-thewebsocketprotocol- 07</a>
      */
-    V07("7"),
+    V07(AsciiString.cached("7")),
 
     /**
-     * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
+     * <a href= "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
      * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
      */
-    V08("8"),
+    V08(AsciiString.cached("8")),
 
     /**
-     * <a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a>. This was originally <a href=
-     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
+     * <a href="https://tools.ietf.org/html/rfc6455 ">RFC 6455</a>. This was originally <a href=
+     * "https://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
      * 17</a>
      */
-    V13("13");
+    V13(AsciiString.cached("13"));
 
-    private final String version;
+    private final AsciiString headerValue;
 
-    WebSocketVersion(String version) {
-        this.version = version;
+    WebSocketVersion(AsciiString headerValue) {
+        this.headerValue = headerValue;
     }
-
     /**
      * @return Value for HTTP Header 'Sec-WebSocket-Version'
      */
     public String toHttpHeaderValue() {
-        return version;
+        return toAsciiString().toString();
+    }
+
+    AsciiString toAsciiString() {
+        return headerValue;
     }
 }

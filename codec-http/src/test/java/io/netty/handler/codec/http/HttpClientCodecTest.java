@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -36,6 +36,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -44,6 +45,7 @@ import java.util.concurrent.CountDownLatch;
 import static io.netty.util.ReferenceCountUtil.release;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.*;
 
@@ -135,7 +137,7 @@ public class HttpClientCodecTest {
                     ch.pipeline().addLast(new HttpObjectAggregator(4096));
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpRequest>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) {
                             // This is just a simple demo...don't block in IO
                             assertTrue(ctx.channel() instanceof SocketChannel);
                             final SocketChannel sChannel = (SocketChannel) ctx.channel();
@@ -173,7 +175,7 @@ public class HttpClientCodecTest {
                     ch.pipeline().addLast(new HttpObjectAggregator(4096));
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) {
                             responseReceivedLatch.countDown();
                         }
                     });
@@ -325,6 +327,68 @@ public class HttpClientCodecTest {
         assertThat(ch.finish(), is(false));
 
         assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testWebDavResponse() {
+        byte[] data = ("HTTP/1.1 102 Processing\r\n" +
+                       "Status-URI: Status-URI:http://status.com; 404\r\n" +
+                       "\r\n" +
+                       "1234567812345678").getBytes();
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
+        assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.PROCESSING));
+        HttpContent content = ch.readInbound();
+        // HTTP 102 is not allowed to have content.
+        assertThat(content.content().readableBytes(), is(0));
+        content.release();
+
+        assertThat(ch.finish(), is(false));
+    }
+
+    @Test
+    public void testInformationalResponseKeepsPairsInSync() {
+        byte[] data = ("HTTP/1.1 102 Processing\r\n" +
+                "Status-URI: Status-URI:http://status.com; 404\r\n" +
+                "\r\n").getBytes();
+        byte[] data2 = ("HTTP/1.1 200 OK\r\n" +
+                "Content-Length: 8\r\n" +
+                "\r\n" +
+                "12345678").getBytes();
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
+        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/")));
+        ByteBuf buffer = ch.readOutbound();
+        buffer.release();
+        assertNull(ch.readOutbound());
+        assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.PROCESSING));
+        HttpContent content = ch.readInbound();
+        // HTTP 102 is not allowed to have content.
+        assertThat(content.content().readableBytes(), is(0));
+        assertThat(content, CoreMatchers.<HttpContent>instanceOf(LastHttpContent.class));
+        content.release();
+
+        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
+        buffer = ch.readOutbound();
+        buffer.release();
+        assertNull(ch.readOutbound());
+        assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data2)));
+
+        res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+        content = ch.readInbound();
+        // HTTP 200 has content.
+        assertThat(content.content().readableBytes(), is(8));
+        assertThat(content, CoreMatchers.<HttpContent>instanceOf(LastHttpContent.class));
+        content.release();
+
+        assertThat(ch.finish(), is(false));
     }
 
     @Test

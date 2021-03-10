@@ -5,7 +5,7 @@
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,7 +33,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.CompletionException;
 
 import static org.junit.Assert.*;
@@ -50,16 +49,20 @@ public class WebSocketHandshakeHandOverTest {
 
     private final class CloseNoOpServerProtocolHandler extends WebSocketServerProtocolHandler {
         CloseNoOpServerProtocolHandler(String websocketPath) {
-            super(websocketPath, null, false);
+            super(WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath(websocketPath)
+                .allowExtensions(false)
+                .sendCloseFrame(null)
+                .build());
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
             if (frame instanceof CloseWebSocketFrame) {
                 serverReceivedCloseHandshake = true;
                 return;
             }
-            super.decode(ctx, frame, out);
+            super.decode(ctx, frame);
         }
     }
 
@@ -88,7 +91,7 @@ public class WebSocketHandshakeHandOverTest {
                 }
             }
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
         });
 
@@ -100,7 +103,7 @@ public class WebSocketHandshakeHandOverTest {
                 }
             }
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof TextWebSocketFrame) {
                     clientReceivedMessage = true;
                 }
@@ -136,7 +139,7 @@ public class WebSocketHandshakeHandOverTest {
             }
 
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
         });
 
@@ -151,7 +154,7 @@ public class WebSocketHandshakeHandOverTest {
             }
 
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof TextWebSocketFrame) {
                     clientReceivedMessage = true;
                 }
@@ -183,6 +186,40 @@ public class WebSocketHandshakeHandOverTest {
         }
     }
 
+    /**
+     * Tests a scenario when channel is closed while the handshake is in progress. Validates that the handshake
+     * future is notified in such cases.
+     */
+    @Test
+    public void testHandshakeFutureIsNotifiedOnChannelClose() throws Exception {
+        EmbeddedChannel clientChannel = createClientChannel(null);
+        EmbeddedChannel serverChannel = createServerChannel(null);
+
+        try {
+            // Start handshake from client to server but don't complete the handshake for the purpose of this test.
+            transferAllDataWithMerge(clientChannel, serverChannel);
+
+            final WebSocketClientProtocolHandler clientWsHandler =
+                    clientChannel.pipeline().get(WebSocketClientProtocolHandler.class);
+            final WebSocketClientProtocolHandshakeHandler clientWsHandshakeHandler =
+                    clientChannel.pipeline().get(WebSocketClientProtocolHandshakeHandler.class);
+
+            final ChannelHandlerContext ctx = clientChannel.pipeline().context(WebSocketClientProtocolHandler.class);
+
+            // Close the channel while the handshake is in progress. The channel could be closed before the handshake is
+            // complete due to a number of varied reasons. To reproduce the test scenario for this test case,
+            // we would manually close the channel.
+            clientWsHandler.close(ctx, ctx.newPromise());
+
+            // At this stage handshake is incomplete but the handshake future should be completed exceptionally since
+            // channel is closed.
+            assertTrue(clientWsHandshakeHandler.getHandshakeFuture().isDone());
+        } finally {
+            serverChannel.finishAndReleaseAll();
+            clientChannel.finishAndReleaseAll();
+        }
+    }
+
     @Test(timeout = 10000)
     public void testClientHandshakerForceClose() throws Exception {
         final WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
@@ -193,7 +230,7 @@ public class WebSocketHandshakeHandOverTest {
                 new CloseNoOpServerProtocolHandler("/test"),
                 new SimpleChannelInboundHandler<Object>() {
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                     }
                 });
 
@@ -201,17 +238,12 @@ public class WebSocketHandshakeHandOverTest {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-                    ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            clientForceClosed = true;
-                        }
-                    });
+                    ctx.channel().closeFuture().addListener((ChannelFutureListener) future -> clientForceClosed = true);
                     handshaker.close(ctx.channel(), new CloseWebSocketFrame());
                 }
             }
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
         });
 
@@ -274,12 +306,25 @@ public class WebSocketHandshakeHandOverTest {
     }
 
     private static EmbeddedChannel createClientChannel(ChannelHandler handler) throws Exception {
+        return createClientChannel(handler, WebSocketClientProtocolConfig.newBuilder()
+            .webSocketUri("ws://localhost:1234/test")
+            .subprotocol("test-proto-2")
+            .build());
+    }
+
+    private static EmbeddedChannel createClientChannel(ChannelHandler handler, long timeoutMillis) throws Exception {
+        return createClientChannel(handler, WebSocketClientProtocolConfig.newBuilder()
+            .webSocketUri("ws://localhost:1234/test")
+            .subprotocol("test-proto-2")
+            .handshakeTimeoutMillis(timeoutMillis)
+            .build());
+    }
+
+    private static EmbeddedChannel createClientChannel(ChannelHandler handler, WebSocketClientProtocolConfig config) {
         return new EmbeddedChannel(
                 new HttpClientCodec(),
                 new HttpObjectAggregator(8192),
-                new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
-                                                   WebSocketVersion.V13, "test-proto-2",
-                                                   false, null, 65536),
+                new WebSocketClientProtocolHandler(config),
                 handler);
     }
 
@@ -294,9 +339,7 @@ public class WebSocketHandshakeHandOverTest {
     }
 
     private static EmbeddedChannel createServerChannel(ChannelHandler handler) {
-        return new EmbeddedChannel(
-                new HttpServerCodec(),
-                new HttpObjectAggregator(8192),
+        return createServerChannel(
                 new WebSocketServerProtocolHandler("/test", "test-proto-1, test-proto-2", false),
                 handler);
     }
@@ -307,16 +350,6 @@ public class WebSocketHandshakeHandOverTest {
                 new HttpServerCodec(),
                 new HttpObjectAggregator(8192),
                 webSocketHandler,
-                handler);
-    }
-
-    private static EmbeddedChannel createClientChannel(ChannelHandler handler, long timeoutMillis) throws Exception {
-        return new EmbeddedChannel(
-                new HttpClientCodec(),
-                new HttpObjectAggregator(8192),
-                new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
-                                                   WebSocketVersion.V13, "test-proto-2",
-                                                   false, null, 65536, timeoutMillis),
                 handler);
     }
 }

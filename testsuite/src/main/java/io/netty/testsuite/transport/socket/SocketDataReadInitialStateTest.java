@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -71,7 +71,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                     serverConnectedChannelRef.set(ch);
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
                             ctx.writeAndFlush(msg.retainedDuplicate());
                             serverReadLatch.countDown();
                         }
@@ -85,7 +85,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, Object msg) {
                             clientReadLatch.countDown();
                         }
                     });
@@ -147,7 +147,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
                             ctx.writeAndFlush(msg.retainedDuplicate());
                             serverReadLatch.countDown();
                         }
@@ -160,7 +160,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, Object msg) {
                             clientReadLatch.countDown();
                         }
                     });

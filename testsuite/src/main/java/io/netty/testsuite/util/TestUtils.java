@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -135,6 +135,10 @@ public final class TestUtils {
 
     public static void compressHeapDumps() throws IOException {
         final File[] files = new File(System.getProperty("user.dir")).listFiles((dir, name) -> name.endsWith(".hprof"));
+        if (files == null) {
+            logger.warn("failed to find heap dump due to I/O error!");
+            return;
+        }
 
         final byte[] buf = new byte[65536];
         final LZMA2Options options = new LZMA2Options(LZMA2Options.PRESET_DEFAULT);

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,7 +15,7 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufConvertible;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
@@ -150,8 +150,8 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                 }
             } else {
                 for (ToSend toSend : messagesQueue) {
-                    if (toSend.toSend instanceof ByteBuf) {
-                        ((ByteBuf) toSend.toSend).release();
+                    if (toSend.toSend instanceof ByteBufConvertible) {
+                        ((ByteBufConvertible) toSend.toSend).asByteBuf().release();
                     }
                 }
             }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,6 +19,7 @@ import io.netty.internal.tcnative.SSL;
 
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
@@ -34,31 +35,35 @@ import static io.netty.handler.ssl.ReferenceCountedOpenSslServerContext.newSessi
 final class OpenSslServerContext extends OpenSslContext {
     private final OpenSslServerSessionContext sessionContext;
 
-    OpenSslServerContext(X509Certificate[] trustCertCollection,
-                         TrustManagerFactory trustManagerFactory,
-                         X509Certificate[] keyCertChain,
-                         PrivateKey key,
-                         String keyPassword,
-                         KeyManagerFactory keyManagerFactory,
-                         Iterable<String> ciphers,
-                         CipherSuiteFilter cipherFilter,
-                         ApplicationProtocolConfig apn,
-                         long sessionCacheSize,
-                         long sessionTimeout,
-                         ClientAuth clientAuth,
-                         String[] protocols,
-                         boolean startTls,
-                         boolean enableOcsp,
-                         String keyStore)
-      throws SSLException {
-        super(ciphers, cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER,
-          keyCertChain, clientAuth, protocols, startTls, enableOcsp);
+    OpenSslServerContext(
+            X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+            X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
+            boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
+        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
+                cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
+                enableOcsp, keyStore, options);
+    }
+
+    @SuppressWarnings("deprecation")
+    private OpenSslServerContext(
+            X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+            X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
+            long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
+            boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
+            throws SSLException {
+        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
+                clientAuth, protocols, startTls, enableOcsp, options);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
+                                               sessionCacheSize, sessionTimeout);
             success = true;
         } finally {
             if (!success) {

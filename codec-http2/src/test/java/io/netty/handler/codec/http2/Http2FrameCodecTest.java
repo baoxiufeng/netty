@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -61,19 +61,17 @@ import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.same;
@@ -141,13 +139,13 @@ public class Http2FrameCodecTest {
         channel.pipeline().fireChannelActive();
 
         // Handshake
-        verify(frameWriter).writeSettings(eqFrameCodecCtx(), anyHttp2Settings(), anyChannelPromise());
+        verify(frameWriter).writeSettings(any(ChannelHandlerContext.class), anyHttp2Settings(), anyChannelPromise());
         verifyNoMoreInteractions(frameWriter);
         channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
 
         frameInboundWriter.writeInboundSettings(initialRemoteSettings);
 
-        verify(frameWriter).writeSettingsAck(eqFrameCodecCtx(), anyChannelPromise());
+        verify(frameWriter).writeSettingsAck(any(ChannelHandlerContext.class), anyChannelPromise());
 
         frameInboundWriter.writeInboundSettingsAck();
 
@@ -177,10 +175,10 @@ public class Http2FrameCodecTest {
 
         channel.writeOutbound(new DefaultHttp2HeadersFrame(response, true, 27).stream(stream2));
         verify(frameWriter).writeHeaders(
-                eqFrameCodecCtx(), eq(1), eq(response), anyInt(), anyShort(), anyBoolean(),
+                any(ChannelHandlerContext.class), eq(1), eq(response),
                 eq(27), eq(true), anyChannelPromise());
         verify(frameWriter, never()).writeRstStream(
-                eqFrameCodecCtx(), anyInt(), anyLong(), anyChannelPromise());
+                any(ChannelHandlerContext.class), anyInt(), anyLong(), anyChannelPromise());
 
         assertEquals(State.CLOSED, stream.state());
         event = inboundHandler.readInboundMessageOrUserEvent();
@@ -206,10 +204,10 @@ public class Http2FrameCodecTest {
 
         channel.writeOutbound(new DefaultHttp2HeadersFrame(response, true, 27).stream(stream2));
         verify(frameWriter).writeHeaders(
-                eqFrameCodecCtx(), eq(1), eq(response), anyInt(), anyShort(), anyBoolean(),
+                any(ChannelHandlerContext.class), eq(1), eq(response),
                 eq(27), eq(true), anyChannelPromise());
         verify(frameWriter, never()).writeRstStream(
-                eqFrameCodecCtx(), anyInt(), anyLong(), anyChannelPromise());
+                any(ChannelHandlerContext.class), anyInt(), anyLong(), anyChannelPromise());
 
         assertEquals(State.CLOSED, stream.state());
         assertTrue(channel.isActive());
@@ -264,13 +262,13 @@ public class Http2FrameCodecTest {
 
         assertNull(inboundHandler.readInbound());
 
-        channel.writeOutbound(new DefaultHttp2HeadersFrame(response, false).stream(stream2));
-        verify(frameWriter).writeHeaders(eqFrameCodecCtx(), eq(1), eq(response), anyInt(),
-                                         anyShort(), anyBoolean(), eq(0), eq(false), anyChannelPromise());
+        inboundHandler.writeOutbound(new DefaultHttp2HeadersFrame(response, false).stream(stream2));
+        verify(frameWriter).writeHeaders(any(ChannelHandlerContext.class), eq(1), eq(response), eq(0),
+                eq(false), anyChannelPromise());
 
         channel.writeOutbound(new DefaultHttp2DataFrame(bb("world"), true, 27).stream(stream2));
         ArgumentCaptor<ByteBuf> outboundData = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeData(eqFrameCodecCtx(), eq(1), outboundData.capture(), eq(27),
+        verify(frameWriter).writeData(any(ChannelHandlerContext.class), eq(1), outboundData.capture(), eq(27),
                                       eq(true), anyChannelPromise());
 
         ByteBuf bb = bb("world");
@@ -279,7 +277,8 @@ public class Http2FrameCodecTest {
         bb.release();
         outboundData.getValue().release();
 
-        verify(frameWriter, never()).writeRstStream(eqFrameCodecCtx(), anyInt(), anyLong(), anyChannelPromise());
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class),
+                anyInt(), anyLong(), anyChannelPromise());
         assertTrue(channel.isActive());
     }
 
@@ -300,7 +299,7 @@ public class Http2FrameCodecTest {
         assertEquals(3, stream2.id());
 
         channel.writeOutbound(new DefaultHttp2ResetFrame(314 /* non-standard error */).stream(stream2));
-        verify(frameWriter).writeRstStream(eqFrameCodecCtx(), eq(3), eq(314L), anyChannelPromise());
+        verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class), eq(3), eq(314L), anyChannelPromise());
         assertEquals(State.CLOSED, stream.state());
         assertTrue(channel.isActive());
     }
@@ -341,7 +340,7 @@ public class Http2FrameCodecTest {
         goAwayFrame.setExtraStreamIds(2);
 
         channel.writeOutbound(goAwayFrame);
-        verify(frameWriter).writeGoAway(eqFrameCodecCtx(), eq(7),
+        verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(7),
                 eq(NO_ERROR.code()), eq(expected), anyChannelPromise());
         assertEquals(State.OPEN, stream.state());
         assertTrue(channel.isActive());
@@ -391,6 +390,18 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void unknownFrameTypeOnConnectionStream() throws Exception {
+        // handle the case where unknown frames are sent before a stream is created,
+        // for example: HTTP/2 GREASE testing
+        ByteBuf debugData = bb("debug");
+        frameInboundWriter.writeInboundFrame((byte) 0xb, 0, new Http2Flags(), debugData);
+        channel.flush();
+
+        assertEquals(0, debugData.refCnt());
+        assertTrue(channel.isActive());
+    }
+
+    @Test
     public void goAwayLastStreamIdOverflowed() throws Exception {
         frameInboundWriter.writeInboundHeaders(5, request, 31, false);
 
@@ -405,7 +416,7 @@ public class Http2FrameCodecTest {
 
         channel.writeOutbound(goAwayFrame);
         // When the last stream id computation overflows, the last stream id should just be set to 2^31 - 1.
-        verify(frameWriter).writeGoAway(eqFrameCodecCtx(), eq(Integer.MAX_VALUE),
+        verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
                 eq(NO_ERROR.code()), eq(debugData), anyChannelPromise());
         debugData.release();
         assertEquals(State.OPEN, stream.state());
@@ -581,7 +592,7 @@ public class Http2FrameCodecTest {
         unknownFrame.stream(stream);
         channel.write(unknownFrame);
 
-        verify(frameWriter).writeFrame(eqFrameCodecCtx(), eq(unknownFrame.frameType()),
+        verify(frameWriter).writeFrame(any(ChannelHandlerContext.class), eq(unknownFrame.frameType()),
                 eq(unknownFrame.stream().id()), eq(unknownFrame.flags()), eq(buffer), any(ChannelPromise.class));
     }
 
@@ -590,7 +601,7 @@ public class Http2FrameCodecTest {
         Http2Settings settings = new Http2Settings();
         channel.write(new DefaultHttp2SettingsFrame(settings));
 
-        verify(frameWriter).writeSettings(eqFrameCodecCtx(), same(settings), any(ChannelPromise.class));
+        verify(frameWriter).writeSettings(any(ChannelHandlerContext.class), same(settings), any(ChannelPromise.class));
     }
 
     @Test(timeout = 5000)
@@ -690,6 +701,33 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void doNotLeakOnFailedInitializationForChannels() throws Exception {
+        setUp(Http2FrameCodecBuilder.forServer(), new Http2Settings().maxConcurrentStreams(2));
+
+        Http2FrameStream stream1 = frameCodec.newStream();
+        Http2FrameStream stream2 = frameCodec.newStream();
+
+        ChannelPromise stream1HeaderPromise = channel.newPromise();
+        ChannelPromise stream2HeaderPromise = channel.newPromise();
+
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1),
+                              stream1HeaderPromise);
+        channel.runPendingTasks();
+
+        frameInboundWriter.writeInboundGoAway(stream1.id(), 0L, Unpooled.EMPTY_BUFFER);
+
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2),
+                              stream2HeaderPromise);
+        channel.runPendingTasks();
+
+        assertTrue(stream1HeaderPromise.syncUninterruptibly().isSuccess());
+        assertTrue(stream2HeaderPromise.isDone());
+
+        assertEquals(0, frameCodec.numInitializingStreams());
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
     public void streamIdentifiersExhausted() throws Http2Exception {
         int maxServerStreamId = Integer.MAX_VALUE - 1;
 
@@ -724,7 +762,8 @@ public class Http2FrameCodecTest {
     public void sendPing() {
         channel.writeAndFlush(new DefaultHttp2PingFrame(12345));
 
-        verify(frameWriter).writePing(eqFrameCodecCtx(), eq(false), eq(12345L), anyChannelPromise());
+        verify(frameWriter).writePing(any(ChannelHandlerContext.class), eq(false),
+                eq(12345L), anyChannelPromise());
     }
 
     @Test
@@ -742,7 +781,7 @@ public class Http2FrameCodecTest {
         Http2Settings settings = new Http2Settings().maxConcurrentStreams(1);
         channel.writeAndFlush(new DefaultHttp2SettingsFrame(settings));
 
-        verify(frameWriter).writeSettings(eqFrameCodecCtx(), eq(settings), anyChannelPromise());
+        verify(frameWriter).writeSettings(any(ChannelHandlerContext.class), eq(settings), anyChannelPromise());
     }
 
     @Test
@@ -798,21 +837,21 @@ public class Http2FrameCodecTest {
         Http2PingFrame frame = inboundHandler.readInbound();
         assertFalse(frame.ack());
         assertEquals(8, frame.content());
-        verify(frameWriter).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
+        verify(frameWriter).writePing(any(ChannelHandlerContext.class), eq(true), eq(8L), anyChannelPromise());
     }
 
     @Test
     public void autoAckPingFalse() throws Exception {
         setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(false), new Http2Settings());
         frameInboundWriter.writeInboundPing(false, 8);
-        verify(frameWriter, never()).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
+        verify(frameWriter, never()).writePing(any(ChannelHandlerContext.class), eq(true), eq(8L), anyChannelPromise());
         Http2PingFrame frame = inboundHandler.readInbound();
         assertFalse(frame.ack());
         assertEquals(8, frame.content());
 
         // Now ack the frame manually.
         channel.writeAndFlush(new DefaultHttp2PingFrame(8, true));
-        verify(frameWriter).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
+        verify(frameWriter).writePing(any(ChannelHandlerContext.class), eq(true), eq(8L), anyChannelPromise());
     }
 
     @Test
@@ -885,7 +924,37 @@ public class Http2FrameCodecTest {
         channel.pipeline().fireUserEventTriggered(upgradeEvent);
     }
 
-    private ChannelHandlerContext eqFrameCodecCtx() {
-        return eq(frameCodec.ctx);
+    @Test
+    public void priorityForNonExistingStream() {
+        writeHeaderAndAssert(1);
+
+        frameInboundWriter.writeInboundPriority(3, 1, (short) 31, true);
+    }
+
+    @Test
+    public void priorityForExistingStream() {
+        writeHeaderAndAssert(1);
+        writeHeaderAndAssert(3);
+        frameInboundWriter.writeInboundPriority(3, 1, (short) 31, true);
+
+        assertInboundStreamFrame(3, new DefaultHttp2PriorityFrame(1, (short) 31, true));
+    }
+
+    private void writeHeaderAndAssert(int streamId) {
+        frameInboundWriter.writeInboundHeaders(streamId, request, 31, false);
+
+        Http2Stream stream = frameCodec.connection().stream(streamId);
+        assertNotNull(stream);
+        assertEquals(State.OPEN, stream.state());
+
+        assertInboundStreamFrame(streamId, new DefaultHttp2HeadersFrame(request, false, 31));
+    }
+
+    private void assertInboundStreamFrame(int expectedId, Http2StreamFrame streamFrame) {
+        Http2StreamFrame inboundFrame = inboundHandler.readInbound();
+        Http2FrameStream stream2 = inboundFrame.stream();
+        assertNotNull(stream2);
+        assertEquals(expectedId, stream2.id());
+        assertEquals(inboundFrame, streamFrame.stream(stream2));
     }
 }

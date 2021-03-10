@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -179,8 +179,8 @@ public interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
+     * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture close(ChannelPromise promise);
@@ -193,8 +193,8 @@ public interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#register(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
+     * {@link ChannelHandler#register(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture register(ChannelPromise promise);

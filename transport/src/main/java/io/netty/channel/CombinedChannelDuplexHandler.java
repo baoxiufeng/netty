@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -103,7 +103,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     /**
-     * Removes the {@link ChannelInboundHandler} that was combined in this {@link CombinedChannelDuplexHandler}.
+     * Removes the inbound {@link ChannelHandler} that was combined in this {@link CombinedChannelDuplexHandler}.
      */
     public final void removeInboundHandler() {
         checkAdded();
@@ -111,7 +111,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
     }
 
     /**
-     * Removes the {@link ChannelOutboundHandler} that was combined in this {@link CombinedChannelDuplexHandler}.
+     * Removes the outbound {@link ChannelHandler} that was combined in this {@link CombinedChannelDuplexHandler}.
      */
     public final void removeOutboundHandler() {
         checkAdded();

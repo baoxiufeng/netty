@@ -4,7 +4,7 @@
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the "License");
  * you may not use this file except in compliance with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is
  * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,6 +32,7 @@ public class WebSocket08FrameDecoderTest {
     public void channelInactive() throws Exception {
         final WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535, false);
         final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        decoder.handlerAdded(ctx);
         decoder.channelInactive(ctx);
         verify(ctx).fireChannelInactive();
     }

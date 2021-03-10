@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,8 @@
 
 package io.netty.buffer;
 
-import io.netty.util.Recycler;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,12 +26,8 @@ import java.nio.ByteBuffer;
 
 final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
-    private static final Recycler<PooledDirectByteBuf> RECYCLER = new Recycler<PooledDirectByteBuf>() {
-        @Override
-        protected PooledDirectByteBuf newObject(Handle<PooledDirectByteBuf> handle) {
-            return new PooledDirectByteBuf(handle, 0);
-        }
-    };
+    private static final ObjectPool<PooledDirectByteBuf> RECYCLER = ObjectPool.newPool(
+            handle -> new PooledDirectByteBuf(handle, 0));
 
     static PooledDirectByteBuf newInstance(int maxCapacity) {
         PooledDirectByteBuf buf = RECYCLER.get();
@@ -38,7 +35,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         return buf;
     }
 
-    private PooledDirectByteBuf(Recycler.Handle<PooledDirectByteBuf> recyclerHandle, int maxCapacity) {
+    private PooledDirectByteBuf(Handle<PooledDirectByteBuf> recyclerHandle, int maxCapacity) {
         super(recyclerHandle, maxCapacity);
     }
 
@@ -257,7 +254,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         }
 
         index = idx(index);
-        tmpBuf.clear().position(index).limit(index + length);
+        tmpBuf.limit(index + length).position(index);
         tmpBuf.put(src);
         return this;
     }
@@ -271,7 +268,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
             return readBytes;
         }
         ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(idx(index));
+        tmpBuf.position(idx(index));
         tmpBuf.put(tmp, 0, readBytes);
         return readBytes;
     }

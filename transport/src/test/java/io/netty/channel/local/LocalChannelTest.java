@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -55,10 +55,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -198,7 +198,7 @@ public class LocalChannelTest {
                 .channel(LocalServerChannel.class)
                 .childHandler(new SimpleChannelInboundHandler<Object>() {
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                         ctx.close();
                         latch.countDown();
                     }
@@ -213,7 +213,7 @@ public class LocalChannelTest {
                     .channel(LocalChannel.class)
                     .handler(new SimpleChannelInboundHandler<Object>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                             // discard
                         }
                     });
@@ -867,7 +867,7 @@ public class LocalChannelTest {
                     }
 
                     @Override
-                    public void channelRead0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+                    public void messageReceived(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
                         // Just drop the buffer
                     }
                 });
@@ -880,7 +880,7 @@ public class LocalChannelTest {
                         ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
 
                             @Override
-                            public void channelRead0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+                            public void messageReceived(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
                                 while (buffer.isReadable()) {
                                     // Fill the ChannelOutboundBuffer with multiple buffers
                                     ctx.write(buffer.readRetainedSlice(1));

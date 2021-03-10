@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -102,6 +102,35 @@ public class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup imp
     public MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory,
                                      IoHandlerFactory ioHandlerFactory) {
         this(nThreads, threadFactory, ioHandlerFactory,
+                SingleThreadEventLoop.DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param executor          the {@link Executor} to use, or {@code null} if the default should be used.
+     * @param ioHandlerFactory  the {@link IoHandlerFactory} to use for creating new
+     *                          {@link IoHandler} instances that will handle the IO for the
+     *                          {@link EventLoop}.
+     */
+    public MultithreadEventLoopGroup(Executor executor,
+                                     IoHandlerFactory ioHandlerFactory) {
+        this(0, executor, ioHandlerFactory,
+                SingleThreadEventLoop.DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject(),
+                SingleThreadEventLoop.DEFAULT_MAX_TASKS_PER_RUN);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param threadFactory     the {@link ThreadFactory} to use, or {@code null} if the default should be used.
+     * @param ioHandlerFactory  the {@link IoHandlerFactory} to use for creating new
+     *                          {@link IoHandler} instances that will handle the IO for the
+     *                          {@link EventLoop}.
+     */
+    public MultithreadEventLoopGroup(ThreadFactory threadFactory,
+                                     IoHandlerFactory ioHandlerFactory) {
+        this(0, threadFactory, ioHandlerFactory,
                 SingleThreadEventLoop.DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
     }
 

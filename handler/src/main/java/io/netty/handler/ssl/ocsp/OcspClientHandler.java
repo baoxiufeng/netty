@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,8 +17,8 @@ package io.netty.handler.ssl.ocsp;
 
 import static java.util.Objects.requireNonNull;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.ssl.ReferenceCountedOpenSslContext;
 import io.netty.handler.ssl.ReferenceCountedOpenSslEngine;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
@@ -33,7 +33,7 @@ import javax.net.ssl.SSLHandshakeException;
  * @see ReferenceCountedOpenSslEngine#getOcspResponse()
  */
 @UnstableApi
-public abstract class OcspClientHandler implements ChannelInboundHandler {
+public abstract class OcspClientHandler implements ChannelHandler {
 
     private final ReferenceCountedOpenSslEngine engine;
 
@@ -48,15 +48,13 @@ public abstract class OcspClientHandler implements ChannelInboundHandler {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireUserEventTriggered(evt);
         if (evt instanceof SslHandshakeCompletionEvent) {
-            ctx.pipeline().remove(this);
-
             SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
             if (event.isSuccess() && !verify(ctx, engine)) {
                 throw new SSLHandshakeException("Bad OCSP response");
             }
+            ctx.pipeline().remove(this);
         }
-
-        ctx.fireUserEventTriggered(evt);
     }
 }

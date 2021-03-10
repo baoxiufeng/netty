@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -21,11 +21,11 @@ import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
 
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 public class ReentrantChannelTest extends BaseChannelTest {
@@ -136,39 +136,22 @@ public class ReentrantChannelTest extends BaseChannelTest {
         assertLog(
                 // Case 1:
                 "WRITABILITY: writable=false\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "WRITABILITY: writable=false\n" +
-                        "WRITABILITY: writable=false\n" +
-                        "FLUSH\n" +
-                        "WRITABILITY: writable=true\n",
+                "FLUSH\n" +
+                "WRITE\n" +
+                "WRITABILITY: writable=false\n" +
+                "WRITABILITY: writable=false\n" +
+                "FLUSH\n" +
+                "WRITABILITY: writable=true\n",
                 // Case 2:
                 "WRITABILITY: writable=false\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "WRITABILITY: writable=false\n" +
-                        "WRITABILITY: writable=false\n" +
-                        "FLUSH\n" +
-                        "WRITABILITY: writable=true\n" +
-                        "FLUSH\n",
-                // Case 3:
+                "FLUSH\n" +
+                "WRITE\n" +
                 "WRITABILITY: writable=false\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "WRITABILITY: writable=false\n" +
-                        "FLUSH\n" +
-                        "WRITABILITY: writable=true\n",
-                // Case 4:
-                "WRITABILITY: writable=false\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "WRITABILITY: writable=false\n" +
-                        "FLUSH\n" +
-                        "WRITABILITY: writable=true\n" +
-                        "WRITABILITY: writable=true\n");
+                "FLUSH\n" +
+                "WRITABILITY: writable=true\n" +
+                "WRITABILITY: writable=true\n");
     }
 
-    @Ignore("The whole test is questionable so ignore for now")
     @Test
     public void testWriteFlushPingPong() throws Exception {
 
@@ -204,41 +187,26 @@ public class ReentrantChannelTest extends BaseChannelTest {
                     ctx.channel().write(createTestBuf(2000));
                 }
                 ctx.flush();
-                if (flushCount == 5) {
-                    ctx.close();
-                }
             }
         });
 
-        clientChannel.write(createTestBuf(2000));
-        clientChannel.closeFuture().syncUninterruptibly();
+        clientChannel.writeAndFlush(createTestBuf(2000));
+        clientChannel.close().sync();
+
         assertLog(
-                // Case 1:
                 "WRITE\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "FLUSH\n" +
-                        "CLOSE\n",
-                // Case 2:
+                "FLUSH\n" +
                 "WRITE\n" +
-                        "FLUSH\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "WRITE\n" +
-                        "FLUSH\n" +
-                        "FLUSH\n" +
-                        "WRITE\n" +
-                        "WRITE\n" +
-                        "FLUSH\n" +
-                        "CLOSE\n");
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "WRITE\n" +
+                "FLUSH\n" +
+                "CLOSE\n");
     }
 
     @Test

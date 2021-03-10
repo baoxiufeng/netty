@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -35,7 +35,6 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -197,7 +196,7 @@ public final class Http2TestUtil {
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             reader.readFrame(ctx, in, new Http2FrameListener() {
                 @Override
                 public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
@@ -639,6 +638,10 @@ public final class Http2TestUtil {
 
     static ByteBuf bb(String s) {
         return ByteBufUtil.writeUtf8(UnpooledByteBufAllocator.DEFAULT, s);
+    }
+
+    static ByteBuf bb(int size) {
+        return UnpooledByteBufAllocator.DEFAULT.buffer().writeZero(size);
     }
 
     static void assertEqualsAndRelease(Http2Frame expected, Http2Frame actual) {

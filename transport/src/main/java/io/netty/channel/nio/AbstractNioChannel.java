@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -103,10 +103,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     /**
-     * Return the current {@link SelectionKey}
+     * Return the current {@link SelectionKey} or {@code null} if the underlying channel was not registered with the
+     * {@link java.nio.channels.Selector} yet.
      */
     protected SelectionKey selectionKey() {
-        assert selectionKey != null;
         return selectionKey;
     }
 
@@ -200,7 +200,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Check first if the key is still valid as it may be canceled as part of the deregistration
             // from the EventLoop
             // See https://github.com/netty/netty/issues/2104
-            if (!key.isValid()) {
+            if (key == null || !key.isValid()) {
                 return;
             }
             int interestOps = key.interestOps();
@@ -240,9 +240,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(() -> {
                             ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                            ConnectTimeoutException cause =
-                                    new ConnectTimeoutException("connection timed out: " + remoteAddress);
-                            if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                            if (connectPromise != null && !connectPromise.isDone()
+                                    && connectPromise.tryFailure(new ConnectTimeoutException(
+                                    "connection timed out: " + remoteAddress))) {
                                 close(voidPromise());
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -342,7 +342,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         private boolean isFlushPending() {
             SelectionKey selectionKey = selectionKey();
-            return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
+            return selectionKey != null && selectionKey.isValid()
+                    && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
         }
     }
 

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -17,9 +17,9 @@ package io.netty.channel;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -285,20 +285,15 @@ public final class PendingWriteQueue {
      * Holds all meta-data and construct the linked-list structure.
      */
     static final class PendingWrite {
-        private static final Recycler<PendingWrite> RECYCLER = new Recycler<PendingWrite>() {
-            @Override
-            protected PendingWrite newObject(Handle<PendingWrite> handle) {
-                return new PendingWrite(handle);
-            }
-        };
+        private static final ObjectPool<PendingWrite> RECYCLER = ObjectPool.newPool(PendingWrite::new);
 
-        private final Recycler.Handle<PendingWrite> handle;
+        private final ObjectPool.Handle<PendingWrite> handle;
         private PendingWrite next;
         private long size;
         private ChannelPromise promise;
         private Object msg;
 
-        private PendingWrite(Recycler.Handle<PendingWrite> handle) {
+        private PendingWrite(ObjectPool.Handle<PendingWrite> handle) {
             this.handle = handle;
         }
 

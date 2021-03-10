@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,12 +16,19 @@
 
 package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
@@ -31,6 +38,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.resolver.AbstractAddressResolver;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -44,6 +52,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
@@ -55,7 +65,9 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 public class BootstrapTest {
@@ -70,6 +82,47 @@ public class BootstrapTest {
         groupB.shutdownGracefully();
         groupA.terminationFuture().syncUninterruptibly();
         groupB.terminationFuture().syncUninterruptibly();
+    }
+
+    @Test
+    public void testOptionsCopied() {
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.option(ChannelOption.AUTO_READ, true);
+        Map.Entry<ChannelOption<?>, Object>[] channelOptions = bootstrapA.newOptionsArray();
+        bootstrapA.option(ChannelOption.AUTO_READ, false);
+        assertEquals(ChannelOption.AUTO_READ, channelOptions[0].getKey());
+        assertEquals(true, channelOptions[0].getValue());
+    }
+
+    @Test
+    public void testAttributesCopied() {
+        AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        String value = "value";
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.attr(key, value);
+        Map.Entry<AttributeKey<?>, Object>[] attributesArray = bootstrapA.newAttributesArray();
+        bootstrapA.attr(key, "value2");
+        assertEquals(key, attributesArray[0].getKey());
+        assertEquals(value, attributesArray[0].getValue());
+    }
+
+    @Test
+    public void optionsAndAttributesMustBeAvailableOnChannelInit() throws InterruptedException {
+        final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
+        new Bootstrap()
+                .group(groupA)
+                .channel(LocalChannel.class)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .attr(key, "value")
+                .handler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) throws Exception {
+                        Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                        assertEquals(4242, (int) option);
+                        assertEquals("value", ch.attr(key).get());
+                    }
+                })
+                .bind(LocalAddress.ANY).sync();
     }
 
     @Test(timeout = 10000)
@@ -281,6 +334,56 @@ public class BootstrapTest {
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), sameInstance((Throwable) exception));
         assertThat(connectFuture.channel(), is(not(nullValue())));
+    }
+
+    @Test
+    public void testChannelOptionOrderPreserve() throws InterruptedException {
+        final BlockingQueue<ChannelOption<?>> options = new LinkedBlockingQueue<>();
+        class ChannelConfigValidator extends DefaultChannelConfig {
+            ChannelConfigValidator(Channel channel) {
+                super(channel);
+            }
+
+            @Override
+            public <T> boolean setOption(ChannelOption<T> option, T value) {
+                options.add(option);
+                return super.setOption(option, value);
+            }
+        }
+        final CountDownLatch latch = new CountDownLatch(1);
+        final Bootstrap bootstrap = new Bootstrap()
+                .handler(new ChannelInitializer() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        latch.countDown();
+                    }
+                })
+                .group(groupA)
+                .channelFactory(new ChannelFactory<Channel>() {
+                    @Override
+                    public Channel newChannel(EventLoop eventLoop) {
+                        return new LocalChannel(eventLoop) {
+                            private ChannelConfigValidator config;
+                            @Override
+                            public synchronized ChannelConfig config() {
+                                if (config == null) {
+                                    config = new ChannelConfigValidator(this);
+                                }
+                                return config;
+                            }
+                        };
+                    }
+                })
+                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1)
+                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 2);
+
+        bootstrap.register().syncUninterruptibly();
+
+        latch.await();
+
+        // Check the order is the same as what we defined before.
+        assertSame(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, options.take());
+        assertSame(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, options.take());
     }
 
     private static final class LateRegisterHandler implements ChannelHandler {

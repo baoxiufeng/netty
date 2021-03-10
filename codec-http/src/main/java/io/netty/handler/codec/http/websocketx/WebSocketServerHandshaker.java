@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,13 +35,13 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -112,7 +112,7 @@ public abstract class WebSocketServerHandshaker {
         } else {
             this.subprotocols = EmptyArrays.EMPTY_STRINGS;
         }
-        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        this.decoderConfig = Objects.requireNonNull(decoderConfig, "decoderConfig");
     }
 
     /**
@@ -204,7 +204,7 @@ public abstract class WebSocketServerHandshaker {
         ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
         final String encoderName;
         if (ctx == null) {
-            // this means the user use a HttpServerCodec
+            // this means the user use an HttpServerCodec
             ctx = p.context(HttpServerCodec.class);
             if (ctx == null) {
                 promise.setFailure(
@@ -275,7 +275,7 @@ public abstract class WebSocketServerHandshaker {
         ChannelPipeline p = channel.pipeline();
         ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
         if (ctx == null) {
-            // this means the user use a HttpServerCodec
+            // this means the user use an HttpServerCodec
             ctx = p.context(HttpServerCodec.class);
             if (ctx == null) {
                 promise.setFailure(
@@ -291,7 +291,7 @@ public abstract class WebSocketServerHandshaker {
         p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
         p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpRequest>() {
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
+            protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
                 // Remove ourself and do the actual handshake
                 ctx.pipeline().remove(this);
                 handshake(channel, msg, responseHeaders, promise);
@@ -300,9 +300,9 @@ public abstract class WebSocketServerHandshaker {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 // Remove ourself and fail the handshake promise.
-                ctx.pipeline().remove(this);
                 promise.tryFailure(cause);
                 ctx.fireExceptionCaught(cause);
+                ctx.pipeline().remove(this);
             }
 
             @Override

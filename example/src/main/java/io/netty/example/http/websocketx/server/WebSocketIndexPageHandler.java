@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -54,7 +54,7 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         // Handle a bad request.
         if (!req.decoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.EMPTY_BUFFER));

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -311,7 +311,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             bytesRead += msg.readableBytes();
             if (bytesRead >= expectedBytes) {
                 // We write a reply and immediately close our end of the socket.
@@ -357,23 +357,23 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ByteBuf buf = ctx.alloc().buffer(expectedBytes);
             buf.writerIndex(buf.writerIndex() + expectedBytes);
-            ctx.writeAndFlush(buf.retainedDuplicate()).addListener((ChannelFutureListener) f -> {
-                // We wait here to ensure that we write before we have a chance to process the outbound
-                // shutdown event.
-                followerCloseLatch.await();
+            ctx.writeAndFlush(buf.retainedDuplicate());
 
-                // This write should fail, but we should still be allowed to read the peer's data
-                ctx.writeAndFlush(buf).addListener((ChannelFutureListener) future -> {
-                    if (future.cause() == null) {
-                        causeRef.set(new IllegalStateException("second write should have failed!"));
-                        doneLatch.countDown();
-                    }
-                });
+            // We wait here to ensure that we write before we have a chance to process the outbound
+            // shutdown event.
+            followerCloseLatch.await();
+
+            // This write should fail, but we should still be allowed to read the peer's data
+            ctx.writeAndFlush(buf).addListener((ChannelFutureListener) future -> {
+                if (future.cause() == null) {
+                    causeRef.set(new IllegalStateException("second write should have failed!"));
+                    doneLatch.countDown();
+                }
             });
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             bytesRead += msg.readableBytes();
             if (bytesRead >= expectedBytes) {
                 if (!seenOutputShutdown) {

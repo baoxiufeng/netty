@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -38,18 +38,7 @@ public class DefaultHttp2Headers
                     "empty headers are not allowed [%s]", name));
         }
         if (name instanceof AsciiString) {
-            final int index;
-            try {
-                index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
-            } catch (Http2Exception e) {
-                PlatformDependent.throwException(e);
-                return;
-            } catch (Throwable t) {
-                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, t,
-                        "unexpected error. invalid header name [%s]", name));
-                return;
-            }
-
+            int index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
             if (index != -1) {
                 PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
                         "invalid header name [%s]", name));
@@ -109,7 +98,7 @@ public class DefaultHttp2Headers
 
     @Override
     public Http2Headers clear() {
-        this.firstNonPseudo = head;
+        firstNonPseudo = head;
         return super.clear();
     }
 
